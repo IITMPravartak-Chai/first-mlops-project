@@ -1,0 +1,49 @@
+name: CI/CD Pipeline - Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Build Docker image on GitHub runner (only build, no python run)
+      - name: Build Docker image
+        run: |
+          docker build -t first-mlops-project:latest .
+
+      # 3. Setup SSH key
+      - name: Setup SSH key
+        run: |
+          echo "${{ secrets.TPI_STAGING_SSH_KEY }}" > $HOME/private_key
+          chmod 600 $HOME/private_key
+
+      # 4. Test SSH connection
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -i $HOME/private_key \
+          ${{ secrets.TPI_STAGING_SSH_USER_NAME }}@${{ secrets.TPI_STAGING_SSH_HOST_IP }} \
+          "echo SSH_OK"
+
+      # 5. Deploy on cloud server (build & run there)
+      - name: Deploy to cloud server
+        run: |
+          ssh -o StrictHostKeyChecking=no -i $HOME/private_key \
+          ${{ secrets.TPI_STAGING_SSH_USER_NAME }}@${{ secrets.TPI_STAGING_SSH_HOST_IP }} "
+            cd /home/ubuntu/Keerthiga/first-mlops-project &&
+            docker stop first-mlops || true &&
+            docker rm first-mlops || true &&
+            docker build -t first-mlops-project:latest . &&
+            docker run -d \
+              --name first-mlops \
+              -p 8080:8000 \
+              --restart unless-stopped \
+              first-mlops-project:latest
+          "
