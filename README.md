@@ -94,3 +94,4 @@ kubectl apply -f diabetes-prediction-model-deployment.yaml
 🙌 Credits
 
 Mlops Demo project sample code 
+# trigger action
